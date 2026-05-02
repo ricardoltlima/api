@@ -1,0 +1,7 @@
+{
+  "cari_cda_id": "cda_restricted",
+  "bank_cda_id": "CDA002",
+  "cari_customer_id": "cust_restricted",
+  "cari_wallet_address": "0xRestrictedWalletAddress",
+  "cari_wallet_status": "restricted"
+}

@@ -2,6 +2,7 @@ package com.mtb.app.controller.v1;
 
 import com.mtb.app.error.ApiException;
 import com.mtb.app.error.ApiKeyException;
+import com.mtb.app.error.DuplicateActiveCDAException;
 import com.mtb.app.error.ElementNotFoundException;
 import com.mtb.app.error.ErrorResponse;
 import com.mtb.app.error.ValidationException;
@@ -11,6 +12,7 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,10 +31,36 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleArgumentsNotValidException(MethodArgumentNotValidException exception) {
+        List<ErrorResponse.ErrorDetail> errorDetails = new ArrayList<>();
+        exception.getBindingResult().getFieldErrors().forEach(error ->
+                errorDetails.add(new ErrorResponse.ErrorDetail(error.getField(), error.getDefaultMessage())));
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        "Validation failed",
+                        "VALIDATION_ERROR",
+                        errorDetails
+                ));
+    }
+
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorResponse> handleBusinessValidationException(ValidationException exception) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        exception.getError(),
+                        exception.getCode(),
+                        List.of(new ErrorResponse.ErrorDetail(exception.getField(), exception.getMessage()))
+                ));
+    }
+
+    @ExceptionHandler(DuplicateActiveCDAException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateActiveCdaException(DuplicateActiveCDAException exception) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(
                         exception.getError(),
                         exception.getCode(),
@@ -68,21 +96,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(body);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleArgumentsNotValidException(MethodArgumentNotValidException exception) {
-        List<ErrorResponse.ErrorDetail> errorDetails = new ArrayList<>();
-        exception.getBindingResult().getFieldErrors().forEach(error ->
-                errorDetails.add(new ErrorResponse.ErrorDetail(error.getField(), error.getDefaultMessage())));
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(
-                        "Validation failed",
-                        "VALIDATION_ERROR",
-                        errorDetails
-                ));
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleInternalServerError(Exception exception) {
         return ResponseEntity
@@ -90,6 +103,17 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         "Internal Server Error",
                         "INTERNAL_SERVER_ERROR",
+                        List.of()
+                ));
+    }
+
+    @ExceptionHandler(RestClientException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailableException(RestClientException exception) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_GATEWAY)
+                .body(new ErrorResponse(
+                        "Cari is unreachable",
+                        "SERVICE_UNAVAILABLE",
                         List.of()
                 ));
     }

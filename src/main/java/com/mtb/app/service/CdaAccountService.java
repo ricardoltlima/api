@@ -1,56 +1,41 @@
 package com.mtb.app.service;
 
-import com.mtb.app.client.WalletProvisionClient;
-import com.mtb.app.error.ApiException;
-import com.mtb.app.error.ValidationException;
+import com.mtb.app.client.CariClient;
+import com.mtb.app.entity.BankCdaEntity;
+import com.mtb.app.error.DuplicateActiveCDAException;
+import com.mtb.app.mapper.CdaAccountMapper;
 import com.mtb.app.model.CdaAccount;
-import com.mtb.app.model.dto.ProvisionWalletResponse;
+import com.mtb.app.model.dto.cda.ProvisionWalletResponse;
 import com.mtb.app.model.dto.cda.CreateCdaAccountRequest;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.http.HttpStatus;
+import com.mtb.app.model.dto.cda.CreateCdaAccountResponse;
+import com.mtb.app.repository.BankCdaRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class CdaAccountService {
 
-    private final WalletProvisionClient walletProvisionClient;
-    private final Map<String, CdaAccount> accountsByBankCdaId = new ConcurrentHashMap<>();
+    private final CariClient cariClient;
+    private final CdaAccountMapper cdaAccountMapper;
+    private final BankCdaRepository bankCdaRepository;
 
-    public CdaAccountService(WalletProvisionClient walletProvisionClient) {
-        this.walletProvisionClient = walletProvisionClient;
+    public CdaAccountService(CariClient cariClient, CdaAccountMapper cdaAccountMapper, BankCdaRepository bankCdaRepository) {
+        this.cariClient = cariClient;
+        this.cdaAccountMapper = cdaAccountMapper;
+        this.bankCdaRepository = bankCdaRepository;
     }
 
-    public CdaAccount createCdaAccount(CreateCdaAccountRequest createCdaAccountRequest, String bankId) {
-        if (accountsByBankCdaId.containsKey(createCdaAccountRequest.bankCdaId())) {
-            throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_CDA", "CDA account already exists");
+    public CreateCdaAccountResponse createCdaAccount(CreateCdaAccountRequest createCdaAccountRequest) {
+        ProvisionWalletResponse wallet = cariClient.provisionWallet(createCdaAccountRequest);
+
+        // Must verify if the Cari CDA already exists for this Bank CDA Id
+        if (bankCdaRepository.findByIdBankCdaIdAndIdCariCdaId(wallet.bankCdaId(), wallet.cariCdaId()).isPresent()) {
+            throw new DuplicateActiveCDAException("Duplicate Active CDA", "DUPLICATE_ACTIVE_CDA", "cariCdaId", "A CDA with that bank_cda_id already exists, or the customer already has an active or restricted CDA");
         }
 
-        ProvisionWalletResponse wallet = walletProvisionClient.provisionWallet(createCdaAccountRequest, bankId);
-        if (wallet == null || wallet.data() == null) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "WALLET_PROVISIONING_FAILED", "Wallet provisioning returned an empty response");
-        }
-        if (!StringUtils.equals(wallet.data().bankCdaId(), createCdaAccountRequest.bankCdaId())) {
-            throw new ValidationException("bank_cda_id", "Provisioned wallet bank_cda_id does not match the request");
-        }
+        BankCdaEntity bankCdaEntity = cdaAccountMapper.toBankCda(wallet);
+        bankCdaRepository.save(bankCdaEntity);
 
-        CdaAccount account = new CdaAccount();
-        account.setCariCdaId(wallet.data().cdaId());
-        account.setBankId(bankId);
-        account.setBankCustomerId(createCdaAccountRequest.bankCustomerId());
-        account.setBankCdaId(createCdaAccountRequest.bankCdaId());
-        account.setCariCustomerId(wallet.data().cariCustomerId());
-        account.setWalletAddress(wallet.data().cariWalletAddress());
-        account.setWalletStatus(wallet.data().walletStatus());
-        account.setBankDdaLinked(createCdaAccountRequest.bankDdaLinked());
-        account.setBankDdaLinkedId(createCdaAccountRequest.bankDdaLinkedId());
-        account.setBankCustomerLegalName(createCdaAccountRequest.bankCustomerLegalName());
-        account.setBankCustomerEin(createCdaAccountRequest.bankCustomerEin());
-        account.setState("active");
-        accountsByBankCdaId.put(account.getBankCdaId(), account);
-
-        return account;
+        CdaAccount account = cdaAccountMapper.toCdaAccount(wallet);
+        return cdaAccountMapper.toCreateCdaAccountResponse(account);
     }
 }

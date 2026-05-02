@@ -10,8 +10,8 @@ public class CdaAccount {
     private String bankCustomerId;
     private String bankCdaId;
     private String cariCustomerId;
-    private String walletAddress;
-    private String walletStatus;
+    private String cariWalletAddress;
+    private String cariWalletStatus;
     private BigDecimal tokenBalance;
 
     private String state;
@@ -64,19 +64,35 @@ public class CdaAccount {
     }
 
     public String getWalletAddress() {
-        return walletAddress;
+        return cariWalletAddress;
     }
 
     public void setWalletAddress(String walletAddress) {
-        this.walletAddress = walletAddress;
+        this.cariWalletAddress = walletAddress;
     }
 
     public String getWalletStatus() {
-        return walletStatus;
+        return cariWalletStatus;
     }
 
     public void setWalletStatus(String walletStatus) {
-        this.walletStatus = walletStatus;
+        this.cariWalletStatus = walletStatus;
+    }
+
+    public String getCariWalletAddress() {
+        return cariWalletAddress;
+    }
+
+    public void setCariWalletAddress(String cariWalletAddress) {
+        this.cariWalletAddress = cariWalletAddress;
+    }
+
+    public String getCariWalletStatus() {
+        return cariWalletStatus;
+    }
+
+    public void setCariWalletStatus(String cariWalletStatus) {
+        this.cariWalletStatus = cariWalletStatus;
     }
 
     public BigDecimal getTokenBalance() {

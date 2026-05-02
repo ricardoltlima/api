@@ -1,37 +1,37 @@
 package com.mtb.app.handler;
 
+import com.mtb.app.model.Transaction;
 import com.mtb.app.model.TransactionOperations;
-import com.mtb.app.model.dto.transaction.CreateTransactionRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component("transactionFactory")
 public class TransactionFactory {
 
-    @Qualifier("mintTransactionHandler")
-    private final MintTransactionHandler mintTransactionHandler;
+    private static final Logger logger = LoggerFactory.getLogger(TransactionFactory.class);
 
-    @Qualifier("burnTransactionHandler")
-    private final BurnTransactionHandler burnTransactionHandler;
+    @Qualifier("cdaTransactionHandler")
+    private final CdaTransactionHandler cdaTransactionHandler;
 
-    @Qualifier("transferTransactionHandler")
-    private final TransferTransactionHandler transferTransactionHandler;
+    @Qualifier("transferHandler")
+    private final TransferHandler transferHandler;
 
-    public TransactionFactory(MintTransactionHandler mintTransactionHandler,
-                              BurnTransactionHandler burnTransactionHandler,
-                              TransferTransactionHandler transferTransactionHandler) {
-        this.mintTransactionHandler = mintTransactionHandler;
-        this.burnTransactionHandler = burnTransactionHandler;
-        this.transferTransactionHandler = transferTransactionHandler;
+    public TransactionFactory(CdaTransactionHandler cdaTransactionHandler,
+                              TransferHandler transferHandler) {
+        this.cdaTransactionHandler = cdaTransactionHandler;
+        this.transferHandler = transferHandler;
     }
 
-    public Transaction getTransactionType(CreateTransactionRequest request) {
+    public TransactionHandler getTransactionType(Transaction transaction) {
 
-        TransactionOperations type = TransactionOperations.valueOf(request.type().toUpperCase());
+        TransactionOperations type = transaction.getOperation();
+        logger.info("Transaction Type: {}", type);
+
         return switch (type) {
-            case MINT -> mintTransactionHandler;
-            case BURN -> burnTransactionHandler;
-            case ON_US, INTERBANK -> transferTransactionHandler;
+            case MINT, BURN -> cdaTransactionHandler;
+            case ON_US, INTERBANK -> transferHandler;
         };
     }
 

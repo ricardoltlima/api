@@ -2,7 +2,7 @@ package com.mtb.app.model.dto.transaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record CreateTransactionResponse(
+public record CariTransactionResponse(
 
         @JsonProperty("operation")
         String operation,
@@ -13,4 +13,8 @@ public record CreateTransactionResponse(
         @JsonProperty("odfi_status")
         String odfiStatus
 ) {
+
+    public String type() {
+        return operation;
+    }
 }
