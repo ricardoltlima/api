@@ -17,9 +17,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.client.RestClientException;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -93,19 +96,42 @@ class CdaAccountControllerTests {
 
     @Test
     void createCdaAccountReturnsBadRequestWhenBodyIsInvalid() throws Exception {
+        String valueOverMaxLength = "a".repeat(256);
+
         mockMvc.perform(post("/api/v1/cda-accounts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "bank_customer_id": "",
                                   "bank_cda_id": "",
-                                  "bank_dda_linked": null,
+                                  "bank_dda_linked": false,
+                                  "bank_dda_linked_id": "%s",
+                                  "bank_customer_legal_name": "%s",
                                   "bank_customer_ein": "invalid"
                                 }
-                                """))
+                                """.formatted(valueOverMaxLength, valueOverMaxLength)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Validation failed"))
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.details").isArray());
+                .andExpect(jsonPath("$.details", hasSize(6)))
+                .andExpect(jsonPath("$.details[*].field", containsInAnyOrder(
+                        "bankCustomerId",
+                        "bankCdaId",
+                        "bankDdaLinked",
+                        "bankDdaLinkedId",
+                        "bankCustomerLegalName",
+                        "bankCustomerEin"
+                )))
+                .andExpect(jsonPath("$.details[*].message", containsInAnyOrder(
+                        "bank_customer_id is Required",
+                        "bank_cda_id is Required",
+                        "bank_dda_linked must be true - CDA accounts require a linked DDA account",
+                        "bank_dda_linked_id must not exceed 255 characters",
+                        "bank_customer_legal_name must not exceed 255 characters",
+                        "bank_customer_ein must have format XX-XXXXXXX"
+                )));
+
+        verify(cdaAccountService, never()).createCdaAccount(any(CreateCdaAccountRequest.class));
     }
 
     @Test
