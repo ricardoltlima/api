@@ -10,24 +10,31 @@ import com.mtb.app.model.dto.transaction.CreateTransactionResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-@Mapper(componentModel = "spring", imports = {OffsetDateTime.class, TransactionOperations.class})
+@Mapper(componentModel = "spring",
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        imports = {OffsetDateTime.class, TransactionOperations.class})
 public interface TransactionMapper {
 
     /**
-     * Prepares the object to be sent to Cari.
-     * The original bankCdaId won't be sent to Cari, but a generated String instead.
-     *
-     * @param transaction contains the request values
-     * @return the request to Cari
+     * Populates the Transaction object from the original request.
      */
-    @Mapping(target = "bankCdaId", expression = "java(generateBankCdaId())")
-    @Mapping(target = "type", source = "operation")
-    CariTransactionRequest toCariTransactionRequest(Transaction transaction);
+    @Mapping(target = "operation", expression = "java(TransactionOperations.valueOf(createTransactionRequest.type().toUpperCase()))")
+    @Mapping(target = "customerId", source = "bankCustomerId")
+    Transaction toCdaTransaction(CreateTransactionRequest createTransactionRequest);
 
+    @Mapping(target = "type", source = "transaction.operation")
+    @Mapping(target = "bankCdaId", source = "bankCdaId")
+    @Mapping(target = "tokenAmount", source = "transaction.tokenAmount")
+    CariTransactionRequest toCariTransactionRequest(Transaction transaction, String bankCdaId);
+
+    /**
+     * Creates the Transaction Entity to be persisted after Cari's response.
+     */
     @Mapping(target = "bankCdaId", source = "transaction.bankCdaId")
     @Mapping(target = "tokenAmount", source = "transaction.tokenAmount")
     @Mapping(target = "customerId", source = "transaction.customerId")
@@ -36,10 +43,6 @@ public interface TransactionMapper {
     @Mapping(target = "internalBankCdaId", source = "cariTransactionRequest.bankCdaId")
     TransactionEntity toTransactionEntity(Transaction transaction, CariTransactionResponse cariTransactionResponse, CariTransactionRequest cariTransactionRequest);
 
-    @Mapping(target = "operation", expression = "java(TransactionOperations.valueOf(cariTransactionResponse.type().toUpperCase()))")
-    @Mapping(target = "customerId", source = "bankCustomerId")
-    Transaction toCdaTransaction(CreateTransactionRequest cariTransactionResponse);
-
     /**
      * Receives the response from Cari and populates the endpoint return object
      *
@@ -47,9 +50,4 @@ public interface TransactionMapper {
      * @return The endpoint object
      */
     CreateTransactionResponse toCdaTransaction(CariTransactionResponse cariTransactionResponse);
-
-    @Named("generateBankCdaId")
-    default String generateBankCdaId() {
-        return "TDN" + UUID.randomUUID();
-    }
 }

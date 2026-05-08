@@ -12,15 +12,21 @@ public class TransactionFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(TransactionFactory.class);
 
-    @Qualifier("cdaTransactionHandler")
-    private final CdaTransactionHandler cdaTransactionHandler;
+    @Qualifier("mintTransactionHandler")
+    private final MintTransactionHandler mintTransactionHandler;
+
+    @Qualifier("burnTransactionHandler")
+    private final BurnTransactionHandler burnTransactionHandler;
 
     @Qualifier("transferHandler")
     private final TransferHandler transferHandler;
 
-    public TransactionFactory(CdaTransactionHandler cdaTransactionHandler,
+    public TransactionFactory(MintTransactionHandler mintTransactionHandler,
+                              BurnTransactionHandler burnTransactionHandler,
                               TransferHandler transferHandler) {
-        this.cdaTransactionHandler = cdaTransactionHandler;
+
+        this.mintTransactionHandler = mintTransactionHandler;
+        this.burnTransactionHandler = burnTransactionHandler;
         this.transferHandler = transferHandler;
     }
 
@@ -30,7 +36,8 @@ public class TransactionFactory {
         logger.info("Transaction Type: {}", type);
 
         return switch (type) {
-            case MINT, BURN -> cdaTransactionHandler;
+            case MINT -> mintTransactionHandler;
+            case BURN -> burnTransactionHandler;
             case ON_US, INTERBANK -> transferHandler;
         };
     }

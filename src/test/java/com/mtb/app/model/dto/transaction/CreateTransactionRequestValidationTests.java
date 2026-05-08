@@ -121,7 +121,7 @@ class CreateTransactionRequestValidationTests {
         ));
 
         assertThat(violations).hasSize(1);
-        assertThat(singleViolation(violations).getPropertyPath().toString()).isEqualTo("bankDdaId");
+        assertThat(singleViolation(violations).getPropertyPath().toString()).isEqualTo("bankDdaLinkedId");
         assertThat(singleViolation(violations).getMessage()).isEqualTo("bank_dda_id is Required");
     }
 
@@ -138,7 +138,7 @@ class CreateTransactionRequestValidationTests {
         ));
 
         assertThat(violations).hasSize(1);
-        assertThat(singleViolation(violations).getPropertyPath().toString()).isEqualTo("bankDdaId");
+        assertThat(singleViolation(violations).getPropertyPath().toString()).isEqualTo("bankDdaLinkedId");
     }
 
     @Test
@@ -154,7 +154,7 @@ class CreateTransactionRequestValidationTests {
         ));
 
         assertThat(violations).hasSize(1);
-        assertThat(singleViolation(violations).getPropertyPath().toString()).isEqualTo("bankDdaId");
+        assertThat(singleViolation(violations).getPropertyPath().toString()).isEqualTo("bankDdaLinkedId");
     }
 
     @Test
@@ -388,7 +388,7 @@ class CreateTransactionRequestValidationTests {
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsExactlyInAnyOrder(
-                        "bankDdaId",
+                        "bankDdaLinkedId",
                         "bankCdaId",
                         "tokenAmount",
                         "bankCustomerId",

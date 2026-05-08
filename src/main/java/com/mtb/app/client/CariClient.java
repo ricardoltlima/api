@@ -1,6 +1,6 @@
 package com.mtb.app.client;
 
-import com.mtb.app.model.dto.cda.CreateCdaAccountRequest;
+import com.mtb.app.model.dto.cda.ProvisionWalletRequest;
 import com.mtb.app.model.dto.cda.ProvisionWalletResponse;
 import com.mtb.app.model.dto.transaction.CariTransactionRequest;
 import com.mtb.app.model.dto.transaction.CariTransactionResponse;
@@ -42,10 +42,10 @@ public class CariClient {
                 .build();
     }
 
-    public ProvisionWalletResponse provisionWallet(CreateCdaAccountRequest createCdaAccountRequest) {
+    public ProvisionWalletResponse provisionWallet(ProvisionWalletRequest provisionWalletRequest) {
         if (mockEnabled) {
             LOG.info(MOCK_MODE);
-            return mockResponder.getJsonResponse(createCdaAccountRequest);
+            return mockResponder.getJsonResponse(provisionWalletRequest);
         }
 
         try {
@@ -55,7 +55,7 @@ public class CariClient {
 
             return restClient.post().uri("/v1/cda-accounts")
                     .headers(headers -> headers.addAll(walletHeader))
-                    .body(createCdaAccountRequest)
+                    .body(provisionWalletRequest)
                     .retrieve()
                     .body(ProvisionWalletResponse.class);
         } catch (RestClientException ex) {

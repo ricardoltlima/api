@@ -1,6 +1,9 @@
 package com.mtb.app.handler;
 
 import com.mtb.app.client.CariClient;
+import com.mtb.app.client.HoganClient;
+import com.mtb.app.entity.AccountEntity;
+import com.mtb.app.entity.BankCariId;
 import com.mtb.app.entity.TransactionEntity;
 import com.mtb.app.mapper.TransactionMapper;
 import com.mtb.app.model.Transaction;
@@ -8,6 +11,7 @@ import com.mtb.app.model.TransactionOperations;
 import com.mtb.app.model.dto.transaction.CariTransactionRequest;
 import com.mtb.app.model.dto.transaction.CariTransactionResponse;
 import com.mtb.app.model.dto.transaction.CreateTransactionResponse;
+import com.mtb.app.repository.AccountRepository;
 import com.mtb.app.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +23,7 @@ import org.springframework.web.client.RestClientException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,7 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CdaTransactionHandlerTest {
+class BurnTransactionHandlerTest {
 
     @Mock
     private CariClient cariClient;
@@ -38,14 +43,20 @@ class CdaTransactionHandlerTest {
     @Mock
     private TransactionRepository repository;
 
+    @Mock
+    private HoganClient hoganClient;
+
+    @Mock
+    private AccountRepository accountRepository;
+
     @InjectMocks
-    private CdaTransactionHandler handler;
+    private BurnTransactionHandler handler;
 
     @Test
     void moveFundsCreatesCariRequestCallsCariPersistsEntityAndReturnsResponse() {
         Transaction transaction = mintTransaction();
         CariTransactionRequest cariRequest = new CariTransactionRequest(
-                TransactionOperations.MINT,
+                "mint",
                 "TDN-generated",
                 "1000.00"
         );
@@ -61,7 +72,9 @@ class CdaTransactionHandlerTest {
                 "submitted"
         );
 
-        when(mapper.toCariTransactionRequest(transaction)).thenReturn(cariRequest);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(accountEntity()));
+        when(mapper.toCariTransactionRequest(transaction, "TDN-generated")).thenReturn(cariRequest);
         when(cariClient.executeTransaction(cariRequest)).thenReturn(cariResponse);
         when(mapper.toTransactionEntity(transaction, cariResponse, cariRequest)).thenReturn(transactionEntity);
         when(repository.save(transactionEntity)).thenReturn(transactionEntity);
@@ -74,7 +87,8 @@ class CdaTransactionHandlerTest {
         assertThat(response.tokenAmount()).isEqualTo("1000.00");
         assertThat(response.odfiStatus()).isEqualTo("submitted");
 
-        verify(mapper).toCariTransactionRequest(transaction);
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
+        verify(mapper).toCariTransactionRequest(transaction, "TDN-generated");
         verify(cariClient).executeTransaction(cariRequest);
         verify(mapper).toTransactionEntity(transaction, cariResponse, cariRequest);
         verify(repository).save(transactionEntity);
@@ -86,11 +100,14 @@ class CdaTransactionHandlerTest {
         Transaction transaction = mintTransaction();
         RuntimeException mappingException = new IllegalArgumentException("Invalid transaction");
 
-        when(mapper.toCariTransactionRequest(transaction)).thenThrow(mappingException);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(accountEntity()));
+        when(mapper.toCariTransactionRequest(transaction, "TDN-generated")).thenThrow(mappingException);
 
         assertThatThrownBy(() -> handler.moveFunds(transaction))
                 .isSameAs(mappingException);
 
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
         verify(cariClient, never()).executeTransaction(org.mockito.ArgumentMatchers.any(CariTransactionRequest.class));
         verify(repository, never()).save(org.mockito.ArgumentMatchers.any(TransactionEntity.class));
         verify(mapper, never()).toCdaTransaction(org.mockito.ArgumentMatchers.any(CariTransactionResponse.class));
@@ -100,19 +117,23 @@ class CdaTransactionHandlerTest {
     void moveFundsDoesNotPersistWhenCariCallFails() {
         Transaction transaction = mintTransaction();
         CariTransactionRequest cariRequest = new CariTransactionRequest(
-                TransactionOperations.MINT,
+                "mint",
                 "TDN-generated",
                 "1000.00"
         );
         RestClientException cariException = new RestClientException("Cari transaction request failed");
 
-        when(mapper.toCariTransactionRequest(transaction)).thenReturn(cariRequest);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(accountEntity()));
+        when(mapper.toCariTransactionRequest(transaction, "TDN-generated")).thenReturn(cariRequest);
         when(cariClient.executeTransaction(cariRequest)).thenThrow(cariException);
 
         assertThatThrownBy(() -> handler.moveFunds(transaction))
-                .isSameAs(cariException);
+                .isInstanceOf(RestClientException.class)
+                .hasMessage("Error trying to burn account. Cari transaction request failed");
 
-        verify(mapper).toCariTransactionRequest(transaction);
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
+        verify(mapper).toCariTransactionRequest(transaction, "TDN-generated");
         verify(cariClient).executeTransaction(cariRequest);
         verify(mapper, never()).toTransactionEntity(
                 org.mockito.ArgumentMatchers.any(Transaction.class),
@@ -127,7 +148,7 @@ class CdaTransactionHandlerTest {
     void moveFundsDoesNotMapResponseWhenPersistenceFails() {
         Transaction transaction = mintTransaction();
         CariTransactionRequest cariRequest = new CariTransactionRequest(
-                TransactionOperations.MINT,
+                "mint",
                 "TDN-generated",
                 "1000.00"
         );
@@ -139,7 +160,9 @@ class CdaTransactionHandlerTest {
         TransactionEntity transactionEntity = transactionEntity();
         RuntimeException repositoryException = new IllegalStateException("Database save failed");
 
-        when(mapper.toCariTransactionRequest(transaction)).thenReturn(cariRequest);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(accountEntity()));
+        when(mapper.toCariTransactionRequest(transaction, "TDN-generated")).thenReturn(cariRequest);
         when(cariClient.executeTransaction(cariRequest)).thenReturn(cariResponse);
         when(mapper.toTransactionEntity(transaction, cariResponse, cariRequest)).thenReturn(transactionEntity);
         when(repository.save(transactionEntity)).thenThrow(repositoryException);
@@ -147,7 +170,8 @@ class CdaTransactionHandlerTest {
         assertThatThrownBy(() -> handler.moveFunds(transaction))
                 .isSameAs(repositoryException);
 
-        verify(mapper).toCariTransactionRequest(transaction);
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
+        verify(mapper).toCariTransactionRequest(transaction, "TDN-generated");
         verify(cariClient).executeTransaction(cariRequest);
         verify(mapper).toTransactionEntity(transaction, cariResponse, cariRequest);
         verify(repository).save(transactionEntity);
@@ -157,7 +181,7 @@ class CdaTransactionHandlerTest {
     private Transaction mintTransaction() {
         Transaction transaction = new Transaction();
         transaction.setOperation(TransactionOperations.MINT);
-        transaction.setBankDdaId("bank-dda-1");
+        transaction.setBankDdaLinkedId("123456");
         transaction.setBankCdaId("bank-cda-1");
         transaction.setTokenAmount(new BigDecimal("1000.00"));
         transaction.setCustomerId("bank-customer-1");
@@ -167,13 +191,25 @@ class CdaTransactionHandlerTest {
     private TransactionEntity transactionEntity() {
         return new TransactionEntity(
                 null,
-                "bank-dda-1",
+                "123456",
                 "bank-cda-1",
                 "TDN-generated",
                 new BigInteger("1000"),
                 "bank-customer-1",
                 "submitted",
                 OffsetDateTime.now()
+        );
+    }
+
+    private AccountEntity accountEntity() {
+        return new AccountEntity(
+                new BankCariId("bank-cda-1", "bank-customer-1"),
+                "123456",
+                "cari-cda-1",
+                "TDN-generated",
+                "cari-customer-1",
+                "wallet-address",
+                "active"
         );
     }
 }

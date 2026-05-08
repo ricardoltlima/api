@@ -7,6 +7,7 @@ import com.mtb.app.model.Transaction;
 import com.mtb.app.model.TransactionOperations;
 import com.mtb.app.model.dto.transaction.CreateTransactionRequest;
 import com.mtb.app.model.dto.transaction.CreateTransactionResponse;
+import com.mtb.app.repository.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,6 +36,9 @@ class TransactionsServiceTest {
     @Mock
     private TransactionHandler transactionHandler;
 
+    @Mock
+    private AccountRepository accountRepository;
+
     @InjectMocks
     private TransactionsService transactionsService;
 
@@ -48,6 +53,8 @@ class TransactionsServiceTest {
         );
 
         when(transactionMapper.toCdaTransaction(request)).thenReturn(transaction);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(org.mockito.Mockito.mock(com.mtb.app.entity.AccountEntity.class)));
         when(transactionFactory.getTransactionType(transaction)).thenReturn(transactionHandler);
         when(transactionHandler.moveFunds(transaction)).thenReturn(expectedResponse);
 
@@ -59,6 +66,7 @@ class TransactionsServiceTest {
         assertThat(response.odfiStatus()).isEqualTo("submitted");
 
         verify(transactionMapper).toCdaTransaction(request);
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
         verify(transactionFactory).getTransactionType(transaction);
         verify(transactionHandler).moveFunds(transaction);
     }
@@ -85,12 +93,15 @@ class TransactionsServiceTest {
         RuntimeException factoryException = new IllegalStateException("Unsupported transaction type");
 
         when(transactionMapper.toCdaTransaction(request)).thenReturn(transaction);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(org.mockito.Mockito.mock(com.mtb.app.entity.AccountEntity.class)));
         when(transactionFactory.getTransactionType(transaction)).thenThrow(factoryException);
 
         assertThatThrownBy(() -> transactionsService.createTransaction(request))
                 .isSameAs(factoryException);
 
         verify(transactionMapper).toCdaTransaction(request);
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
         verify(transactionFactory).getTransactionType(transaction);
         verify(transactionHandler, never()).moveFunds(org.mockito.ArgumentMatchers.any(Transaction.class));
     }
@@ -102,6 +113,8 @@ class TransactionsServiceTest {
         RestClientException handlerException = new RestClientException("Cari transaction request failed");
 
         when(transactionMapper.toCdaTransaction(request)).thenReturn(transaction);
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(transaction.getBankCdaId(), transaction.getCustomerId()))
+                .thenReturn(Optional.of(org.mockito.Mockito.mock(com.mtb.app.entity.AccountEntity.class)));
         when(transactionFactory.getTransactionType(transaction)).thenReturn(transactionHandler);
         when(transactionHandler.moveFunds(transaction)).thenThrow(handlerException);
 
@@ -109,6 +122,7 @@ class TransactionsServiceTest {
                 .isSameAs(handlerException);
 
         verify(transactionMapper).toCdaTransaction(request);
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("bank-cda-1", "bank-customer-1");
         verify(transactionFactory).getTransactionType(transaction);
         verify(transactionHandler).moveFunds(transaction);
     }
@@ -128,7 +142,7 @@ class TransactionsServiceTest {
     private Transaction mintTransaction() {
         Transaction transaction = new Transaction();
         transaction.setOperation(TransactionOperations.MINT);
-        transaction.setBankDdaId("bank-dda-1");
+        transaction.setBankDdaLinkedId("bank-dda-1");
         transaction.setBankCdaId("bank-cda-1");
         transaction.setTokenAmount(new BigDecimal("1000.00"));
         transaction.setCustomerId("bank-customer-1");

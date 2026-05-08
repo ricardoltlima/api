@@ -13,8 +13,4 @@ public record CariTransactionResponse(
         @JsonProperty("odfi_status")
         String odfiStatus
 ) {
-
-    public String type() {
-        return operation;
-    }
 }

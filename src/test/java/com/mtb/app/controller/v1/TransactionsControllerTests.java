@@ -72,7 +72,7 @@ class TransactionsControllerTests {
 
         CreateTransactionRequest capturedRequest = requestCaptor.getValue();
         assertThat(capturedRequest.type()).isEqualTo("mint");
-        assertThat(capturedRequest.bankDdaId()).isEqualTo("bank-dda-1");
+        assertThat(capturedRequest.bankDdaLinkedId()).isEqualTo("bank-dda-1");
         assertThat(capturedRequest.bankCdaId()).isEqualTo("bank-cda-1");
         assertThat(capturedRequest.tokenAmount()).isEqualTo("1000.00");
         assertThat(capturedRequest.bankCustomerId()).isEqualTo("bank-customer-1");
@@ -116,7 +116,7 @@ class TransactionsControllerTests {
                         .content("""
                                 {
                                   "type": "mint",
-                                  "bank_dda_id": "",
+                                  "bank_dda_linked_id": "",
                                   "bank_cda_id": "",
                                   "token_amount": "1000.555",
                                   "bank_customer_id": ""
@@ -160,7 +160,7 @@ class TransactionsControllerTests {
         return """
                 {
                   "type": "mint",
-                  "bank_dda_id": "bank-dda-1",
+                  "bank_dda_linked_id": "bank-dda-1",
                   "bank_cda_id": "bank-cda-1",
                   "token_amount": "1000.00",
                   "bank_customer_id": "bank-customer-1"

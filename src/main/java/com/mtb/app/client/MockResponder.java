@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mtb.app.model.TransactionOperations;
-import com.mtb.app.model.dto.cda.CreateCdaAccountRequest;
+import com.mtb.app.model.dto.cda.ProvisionWalletRequest;
 import com.mtb.app.model.dto.cda.ProvisionWalletResponse;
 import com.mtb.app.model.dto.transaction.CariTransactionRequest;
 import com.mtb.app.model.dto.transaction.CariTransactionResponse;
@@ -24,8 +24,8 @@ public class MockResponder {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .registerModule(new JavaTimeModule());
 
-    public ProvisionWalletResponse getJsonResponse(CreateCdaAccountRequest createCdaAccountRequest) {
-        String fileName = getWalletFileName(createCdaAccountRequest);
+    public ProvisionWalletResponse getJsonResponse(ProvisionWalletRequest provisionWalletRequest) {
+        String fileName = getWalletFileName(provisionWalletRequest);
         ClassPathResource resource = new ClassPathResource("/mock-responses/" + fileName);
 
         try (InputStream inputStream = resource.getInputStream()) {
@@ -50,20 +50,20 @@ public class MockResponder {
         return null;
     }
 
-    private String getWalletFileName(CreateCdaAccountRequest createCdaAccountRequest) {
-        return switch (createCdaAccountRequest.bankCdaId()) {
-            case "CDA001" -> "wallet-active.json";
-            case "CDA002" -> "wallet-restricted.json";
+    private String getWalletFileName(ProvisionWalletRequest provisionWalletRequest) {
+        return switch (provisionWalletRequest.bankCdaId()) {
+            case "CUST001" -> "wallet-active.json";
+            case "CUST002" -> "wallet-restricted.json";
             default -> "wallet-closed.json";
         };
     }
 
     private String getWalletFileName(CariTransactionRequest cariTransactionRequest) {
 
-        TransactionOperations type = cariTransactionRequest.type();
+        TransactionOperations type = TransactionOperations.valueOf(cariTransactionRequest.type().toUpperCase());
         return switch (type) {
             case MINT -> "transaction-mint-submitted.json";
-            case BURN -> "transaction-burn-confirmed.json";
+            case BURN -> "transaction-mint-submitted.json";
             default -> "transaction-failed.json";
         };
     }

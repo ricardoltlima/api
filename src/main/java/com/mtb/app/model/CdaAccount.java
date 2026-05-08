@@ -1,42 +1,24 @@
 package com.mtb.app.model;
 
-import java.time.OffsetDateTime;
-import java.math.BigDecimal;
-
 public class CdaAccount {
 
-    private String cariCdaId;
-    private String bankId;
     private String bankCustomerId;
     private String bankCdaId;
-    private String cariCustomerId;
-    private String cariWalletAddress;
-    private String cariWalletStatus;
-    private BigDecimal tokenBalance;
-
-    private String state;
     private Boolean bankDdaLinked;
     private String bankDdaLinkedId;
     private String bankCustomerLegalName;
     private String bankCustomerEin;
 
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
-
-    public String getCariCdaId() {
-        return cariCdaId;
+    public CdaAccount() {
     }
 
-    public void setCariCdaId(String cariCdaId) {
-        this.cariCdaId = cariCdaId;
-    }
-
-    public String getBankId() {
-        return bankId;
-    }
-
-    public void setBankId(String bankId) {
-        this.bankId = bankId;
+    public CdaAccount(String bankCustomerId, String bankCdaId, Boolean bankDdaLinked, String bankDdaLinkedId, String bankCustomerLegalName, String bankCustomerEin) {
+        this.bankCustomerId = bankCustomerId;
+        this.bankCdaId = bankCdaId;
+        this.bankDdaLinked = bankDdaLinked;
+        this.bankDdaLinkedId = bankDdaLinkedId;
+        this.bankCustomerLegalName = bankCustomerLegalName;
+        this.bankCustomerEin = bankCustomerEin;
     }
 
     public String getBankCustomerId() {
@@ -53,62 +35,6 @@ public class CdaAccount {
 
     public void setBankCdaId(String bankCdaId) {
         this.bankCdaId = bankCdaId;
-    }
-
-    public String getCariCustomerId() {
-        return cariCustomerId;
-    }
-
-    public void setCariCustomerId(String cariCustomerId) {
-        this.cariCustomerId = cariCustomerId;
-    }
-
-    public String getWalletAddress() {
-        return cariWalletAddress;
-    }
-
-    public void setWalletAddress(String walletAddress) {
-        this.cariWalletAddress = walletAddress;
-    }
-
-    public String getWalletStatus() {
-        return cariWalletStatus;
-    }
-
-    public void setWalletStatus(String walletStatus) {
-        this.cariWalletStatus = walletStatus;
-    }
-
-    public String getCariWalletAddress() {
-        return cariWalletAddress;
-    }
-
-    public void setCariWalletAddress(String cariWalletAddress) {
-        this.cariWalletAddress = cariWalletAddress;
-    }
-
-    public String getCariWalletStatus() {
-        return cariWalletStatus;
-    }
-
-    public void setCariWalletStatus(String cariWalletStatus) {
-        this.cariWalletStatus = cariWalletStatus;
-    }
-
-    public BigDecimal getTokenBalance() {
-        return tokenBalance;
-    }
-
-    public void setTokenBalance(BigDecimal tokenBalance) {
-        this.tokenBalance = tokenBalance;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
     }
 
     public Boolean getBankDdaLinked() {
@@ -141,21 +67,5 @@ public class CdaAccount {
 
     public void setBankCustomerEin(String bankCustomerEin) {
         this.bankCustomerEin = bankCustomerEin;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

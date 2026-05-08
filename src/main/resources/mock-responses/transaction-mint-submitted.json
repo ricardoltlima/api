@@ -1,5 +1,5 @@
 {
-  "operation": "mint",
-  "token_amount": "1000.00",
-  "odfi_status": "submitted"
+  "operation": "BURN",
+  "token_amount": "50.00",
+  "odfi_status": "confirmed"
 }

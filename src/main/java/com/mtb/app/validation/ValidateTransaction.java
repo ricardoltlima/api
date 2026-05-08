@@ -1,7 +1,7 @@
 package com.mtb.app.validation;
 
 import com.mtb.app.error.ValidationException;
-import io.micrometer.common.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

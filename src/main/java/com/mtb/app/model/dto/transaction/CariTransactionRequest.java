@@ -6,7 +6,7 @@ import com.mtb.app.model.TransactionOperations;
 public record CariTransactionRequest(
 
         @JsonProperty("type")
-        TransactionOperations type,
+        String type,
 
         @JsonProperty("bank_cda_id")
         String bankCdaId,

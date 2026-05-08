@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 public class Transaction {
 
     private TransactionOperations operation;
-    private String bankDdaId;
+    private String bankDdaLinkedId;
     private String bankCdaId;
     private BigDecimal tokenAmount;
     private String customerId;
@@ -20,12 +20,12 @@ public class Transaction {
         this.operation = operation;
     }
 
-    public String getBankDdaId() {
-        return bankDdaId;
+    public String getBankDdaLinkedId() {
+        return bankDdaLinkedId;
     }
 
-    public void setBankDdaId(String bankDdaId) {
-        this.bankDdaId = bankDdaId;
+    public void setBankDdaLinkedId(String bankDdaLinkedId) {
+        this.bankDdaLinkedId = bankDdaLinkedId;
     }
 
     public String getBankCdaId() {

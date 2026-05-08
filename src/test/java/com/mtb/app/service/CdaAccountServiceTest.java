@@ -1,14 +1,15 @@
 package com.mtb.app.service;
 
 import com.mtb.app.client.CariClient;
-import com.mtb.app.entity.BankCdaEntity;
-import com.mtb.app.entity.BankCdaId;
+import com.mtb.app.entity.AccountEntity;
+import com.mtb.app.entity.BankCariId;
 import com.mtb.app.error.DuplicateActiveCDAException;
 import com.mtb.app.mapper.CdaAccountMapper;
 import com.mtb.app.model.dto.cda.CreateCdaAccountRequest;
 import com.mtb.app.model.dto.cda.CreateCdaAccountResponse;
+import com.mtb.app.model.dto.cda.ProvisionWalletRequest;
 import com.mtb.app.model.dto.cda.ProvisionWalletResponse;
-import com.mtb.app.repository.BankCdaRepository;
+import com.mtb.app.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +35,7 @@ class CdaAccountServiceTest {
     private CariClient cariClient;
 
     @Mock
-    private BankCdaRepository bankCdaRepository;
+    private AccountRepository accountRepository;
 
     private final CdaAccountMapper cdaAccountMapper = Mappers.getMapper(CdaAccountMapper.class);
 
@@ -42,7 +43,7 @@ class CdaAccountServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CdaAccountService(cariClient, cdaAccountMapper, bankCdaRepository);
+        service = new CdaAccountService(cariClient, cdaAccountMapper, accountRepository);
     }
 
     @Test
@@ -50,9 +51,9 @@ class CdaAccountServiceTest {
         CreateCdaAccountRequest request = validRequest();
         ProvisionWalletResponse wallet = provisionedWallet();
 
-        when(cariClient.provisionWallet(request)).thenReturn(wallet);
-        when(bankCdaRepository.findByIdBankCdaIdAndIdCariCdaId(wallet.bankCdaId(), wallet.cariCdaId()))
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(request.bankCdaId(), request.bankCustomerId()))
                 .thenReturn(Optional.empty());
+        when(cariClient.provisionWallet(any(ProvisionWalletRequest.class))).thenReturn(wallet);
 
         CreateCdaAccountResponse response = service.createCdaAccount(request);
 
@@ -62,15 +63,20 @@ class CdaAccountServiceTest {
         assertThat(response.cariWalletAddress()).isEqualTo("0x742d35Cc6634C0532925a3b8D6c0234E5aC1234D");
         assertThat(response.cariWalletStatus()).isEqualTo("active");
 
-        verify(cariClient).provisionWallet(request);
-        verify(bankCdaRepository).findByIdBankCdaIdAndIdCariCdaId("CDA001", "cda_8x9y0z1a");
+        ArgumentCaptor<ProvisionWalletRequest> requestCaptor = ArgumentCaptor.forClass(ProvisionWalletRequest.class);
+        verify(cariClient).provisionWallet(requestCaptor.capture());
+        assertThat(requestCaptor.getValue().bankCustomerId()).isEqualTo("bank-customer-1");
+        assertThat(requestCaptor.getValue().bankCdaId()).startsWith("TDN");
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("CDA001", "bank-customer-1");
 
-        ArgumentCaptor<BankCdaEntity> entityCaptor = ArgumentCaptor.forClass(BankCdaEntity.class);
-        verify(bankCdaRepository).save(entityCaptor.capture());
+        ArgumentCaptor<AccountEntity> entityCaptor = ArgumentCaptor.forClass(AccountEntity.class);
+        verify(accountRepository).save(entityCaptor.capture());
 
-        BankCdaEntity savedEntity = entityCaptor.getValue();
+        AccountEntity savedEntity = entityCaptor.getValue();
         assertThat(savedEntity.getId().getBankCdaId()).isEqualTo("CDA001");
-        assertThat(savedEntity.getId().getCariCdaId()).isEqualTo("cda_8x9y0z1a");
+        assertThat(savedEntity.getId().getBankCustomerId()).isEqualTo("bank-customer-1");
+        assertThat(savedEntity.getBankDdaId()).isEqualTo("dda-1");
+        assertThat(savedEntity.getInternalBankCdaId()).isEqualTo("CDA001");
         assertThat(savedEntity.getCariCustomerId()).isEqualTo("cust_7a8b9c0d");
         assertThat(savedEntity.getCariWalletAddress()).isEqualTo("0x742d35Cc6634C0532925a3b8D6c0234E5aC1234D");
         assertThat(savedEntity.getCariWalletStatus()).isEqualTo("active");
@@ -79,16 +85,14 @@ class CdaAccountServiceTest {
     @Test
     void createCdaAccountThrowsDuplicateActiveCdaExceptionWhenWalletAlreadyExists() {
         CreateCdaAccountRequest request = validRequest();
-        ProvisionWalletResponse wallet = provisionedWallet();
-        BankCdaEntity existingEntity = new BankCdaEntity(
-                new BankCdaId(wallet.bankCdaId(), wallet.cariCdaId()),
-                wallet.cariCustomerId(),
-                wallet.cariWalletAddress(),
-                wallet.cariWalletStatus()
+        AccountEntity existingEntity = new AccountEntity(
+                new BankCariId(request.bankCdaId(), request.bankCustomerId()),
+                "cust_7a8b9c0d",
+                "0x742d35Cc6634C0532925a3b8D6c0234E5aC1234D",
+                "active"
         );
 
-        when(cariClient.provisionWallet(request)).thenReturn(wallet);
-        when(bankCdaRepository.findByIdBankCdaIdAndIdCariCdaId(wallet.bankCdaId(), wallet.cariCdaId()))
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(request.bankCdaId(), request.bankCustomerId()))
                 .thenReturn(Optional.of(existingEntity));
 
         assertThatThrownBy(() -> service.createCdaAccount(request))
@@ -101,23 +105,26 @@ class CdaAccountServiceTest {
                     assertThat(duplicateException.getMessage()).isEqualTo("A CDA with that bank_cda_id already exists, or the customer already has an active or restricted CDA");
                 });
 
-        verify(bankCdaRepository).findByIdBankCdaIdAndIdCariCdaId("CDA001", "cda_8x9y0z1a");
-        verify(bankCdaRepository, never()).save(any(BankCdaEntity.class));
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("CDA001", "bank-customer-1");
+        verify(cariClient, never()).provisionWallet(any(ProvisionWalletRequest.class));
+        verify(accountRepository, never()).save(any(AccountEntity.class));
     }
 
     @Test
     void createCdaAccountDoesNotSaveWhenCariClientFails() {
         CreateCdaAccountRequest request = validRequest();
 
-        when(cariClient.provisionWallet(request))
+        when(accountRepository.findByIdBankCdaIdAndIdBankCustomerId(request.bankCdaId(), request.bankCustomerId()))
+                .thenReturn(Optional.empty());
+        when(cariClient.provisionWallet(any(ProvisionWalletRequest.class)))
                 .thenThrow(new RestClientException("Cari wallet provisioning request failed"));
 
         assertThatThrownBy(() -> service.createCdaAccount(request))
                 .isInstanceOf(RestClientException.class)
                 .hasMessage("Cari wallet provisioning request failed");
 
-        verify(bankCdaRepository, never()).findByIdBankCdaIdAndIdCariCdaId(any(), any());
-        verify(bankCdaRepository, never()).save(any(BankCdaEntity.class));
+        verify(accountRepository).findByIdBankCdaIdAndIdBankCustomerId("CDA001", "bank-customer-1");
+        verify(accountRepository, never()).save(any(AccountEntity.class));
     }
 
     private CreateCdaAccountRequest validRequest() {

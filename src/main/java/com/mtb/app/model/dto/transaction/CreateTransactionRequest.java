@@ -18,8 +18,8 @@ public record CreateTransactionRequest(
 
         @NotBlank(message = "bank_dda_id is Required")
         @Size(max = 255, message = "bank_dda_id must not exceed 255 characters")
-        @JsonProperty("bank_dda_id")
-        String bankDdaId,
+        @JsonProperty("bank_dda_linked_id")
+        String bankDdaLinkedId,
 
         @NotBlank(message = "bank_cda_id is Required")
         @Size(max = 255, message = "bank_cda_id must not exceed 255 characters")

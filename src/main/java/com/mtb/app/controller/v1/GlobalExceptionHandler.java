@@ -1,6 +1,5 @@
 package com.mtb.app.controller.v1;
 
-import com.mtb.app.error.ApiException;
 import com.mtb.app.error.ApiKeyException;
 import com.mtb.app.error.DuplicateActiveCDAException;
 import com.mtb.app.error.ElementNotFoundException;
@@ -88,12 +87,6 @@ public class GlobalExceptionHandler {
                         exception.getCode(),
                         List.of(new ErrorResponse.ErrorDetail(exception.getField(), exception.getMessage()))
                 ));
-    }
-
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
-        ErrorResponse body = new ErrorResponse(ex.getMessage(), ex.getCode(), List.of());
-        return ResponseEntity.status(ex.getStatus()).body(body);
     }
 
     @ExceptionHandler(Exception.class)
